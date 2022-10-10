@@ -48,6 +48,8 @@ import {
 } from 'shared/lib/customTabs/customTabHelpers';
 import { getSortedGenericAssayTabSpecs } from 'shared/lib/GenericAssayUtils/GenericAssayCommonUtils';
 import { HelpWidget } from 'shared/components/HelpWidget/HelpWidget';
+import GroupComparisonMutationMapper from './GroupComparisonMutationMapper';
+import Mutations from './Mutations';
 
 export interface IGroupComparisonPageProps {
     routing: any;
@@ -130,6 +132,7 @@ export default class GroupComparisonPage extends React.Component<
             this.store.methylationEnrichmentProfiles,
             this.store.survivalClinicalDataExists,
             this.store.genericAssayEnrichmentProfilesGroupedByGenericAssayType,
+            this.store.mutations,
         ],
         render: () => {
             return (
@@ -211,6 +214,19 @@ export default class GroupComparisonPage extends React.Component<
                                 />
                             )}
                             <AlterationEnrichments store={this.store} />
+                        </MSKTab>
+                    )}
+                    {this.store.showMutationsTab && (
+                        <MSKTab
+                            id={GroupComparisonTab.MUTATIONS}
+                            linkText="Mutations"
+                            anchorClassName={
+                                this.store.mutationsTabUnavailable
+                                    ? 'greyedOut'
+                                    : ''
+                            }
+                        >
+                            <Mutations store={this.store} />
                         </MSKTab>
                     )}
                     {this.store.showMRNATab && (

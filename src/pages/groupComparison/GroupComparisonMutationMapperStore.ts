@@ -38,14 +38,8 @@ import PubMedCache from 'shared/cache/PubMedCache';
 import GenomeNexusCache from 'shared/cache/GenomeNexusCache';
 import GenomeNexusMutationAssessorCache from 'shared/cache/GenomeNexusMutationAssessorCache';
 import PdbHeaderCache from 'shared/cache/PdbHeaderCache';
-import MutationMapperStore, {
-    IMutationMapperStoreConfig,
-} from 'shared/components/mutationMapper/MutationMapperStore';
+import MutationMapperStore from 'shared/components/mutationMapper/MutationMapperStore';
 import { MutationTableDownloadDataFetcher } from 'shared/lib/MutationTableDownloadDataFetcher';
-import {
-    normalizeMutations,
-    createVariantAnnotationsByMutationFetcher,
-} from '../../../../shared/components/mutationMapper/MutationMapperUtils';
 import defaultGenomeNexusClient from 'shared/api/genomeNexusClientInstance';
 import defaultGenomeNexusInternalClient from 'shared/api/genomeNexusInternalClientInstance';
 import autobind from 'autobind-decorator';
@@ -53,9 +47,12 @@ import { getGenomeNexusHgvsgUrl } from 'shared/api/urls';
 import { GENOME_NEXUS_ARG_FIELD_ENUM } from 'shared/constants';
 import { getServerConfig } from 'config/config';
 import { REFERENCE_GENOME } from 'shared/lib/referenceGenomeUtils';
-import { DataFilterType } from 'react-mutation-mapper';
+import {
+    createVariantAnnotationsByMutationFetcher,
+    normalizeMutations,
+} from 'shared/components/mutationMapper/MutationMapperUtils';
 
-export default class MutationMapperToolStore {
+export default class GroupComparisonMutationMapperStore {
     @observable mutationData: Partial<MutationInput>[] | undefined;
     @observable criticalErrors: Error[] = [];
     // if we use grch37(default), grch38GenomeNexusUrl will be undefined
@@ -92,12 +89,8 @@ export default class MutationMapperToolStore {
         undefined
     );
 
-    constructor(
-        mutationData?: Partial<MutationInput>[],
-        private mutationMapperStoreConfigOverride?: IMutationMapperStoreConfig
-    ) {
+    constructor() {
         makeObservable(this);
-        this.mutationData = mutationData;
     }
 
     @computed get isoformOverrideSource(): string {
@@ -324,8 +317,6 @@ export default class MutationMapperToolStore {
                                         genomeBuild: this.grch38GenomeNexusUrl
                                             ? REFERENCE_GENOME.grch38.UCSC
                                             : REFERENCE_GENOME.grch37.UCSC,
-                                        ...this
-                                            .mutationMapperStoreConfigOverride,
                                     },
                                     gene,
                                     getMutations,
