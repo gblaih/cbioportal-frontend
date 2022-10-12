@@ -50,6 +50,9 @@ import { getSortedGenericAssayTabSpecs } from 'shared/lib/GenericAssayUtils/Gene
 import { HelpWidget } from 'shared/components/HelpWidget/HelpWidget';
 import GroupComparisonMutationMapper from './GroupComparisonMutationMapper';
 import Mutations from './Mutations';
+import { Dropdown, DropdownButton, MenuItem } from 'react-bootstrap';
+import DropdownMenu from 'react-bootstrap/lib/DropdownMenu';
+import { DropdownSelector } from 'react-mutation-mapper';
 
 export interface IGroupComparisonPageProps {
     routing: any;
@@ -133,6 +136,8 @@ export default class GroupComparisonPage extends React.Component<
             this.store.survivalClinicalDataExists,
             this.store.genericAssayEnrichmentProfilesGroupedByGenericAssayType,
             this.store.mutations,
+            this.store.mutationsByGroup,
+            this.store.genes,
         ],
         render: () => {
             return (
@@ -226,7 +231,115 @@ export default class GroupComparisonPage extends React.Component<
                                     : ''
                             }
                         >
-                            <Mutations store={this.store} />
+                            {/* <Mutations store={this.store} /> */}
+                            {/* selector */}
+                            <div>
+                                <DropdownButton
+                                    title={
+                                        this.store.selectedMutationMapperGene
+                                            .hugoGeneSymbol
+                                    }
+                                    id="geneSelector"
+                                >
+                                    {this.store.genes.result!.map(gene => {
+                                        return (
+                                            <MenuItem
+                                                onClick={() => {
+                                                    this.store.setSelectedMutationMapperGene(
+                                                        gene
+                                                    );
+                                                    console.log(
+                                                        gene.hugoGeneSymbol
+                                                    );
+                                                }}
+                                            >
+                                                {gene.hugoGeneSymbol}
+                                            </MenuItem>
+                                        );
+                                    })}
+                                </DropdownButton>
+                            </div>
+                            <div>
+                                <h3>
+                                    {_(this.store.mutationsByGroup.result!)
+                                        .keys()
+                                        .slice(0, 2)
+                                        .join(' vs ')}
+                                </h3>
+                                <Mutations
+                                    store={this.store}
+                                    mutations={_(
+                                        this.store.mutationsByGroup.result!
+                                    )
+                                        .values()
+                                        .flatten()
+                                        .value()}
+                                    // filters={{
+                                    //     groupFilters: this.store.groupedSamples.map(
+                                    //         group => ({
+                                    //             group: group.name,
+                                    //             filter: {
+                                    //                 type:
+                                    //                     'GroupComparisonFilter',
+                                    //                 values: [group.name],
+                                    //             },
+                                    //         })
+                                    //     ),
+                                    //     filterAppliersOverride: {
+                                    //         ['GroupComparisonFilter']: this
+                                    //             .store.applySampleIdFilter,
+                                    //     },
+                                    // }}
+                                    // gene={
+                                    //     this.store.selectedMutationMapperGene
+                                    // }
+                                    filters={{
+                                        groupFilters: _(
+                                            this.store.mutationsByGroup.result!
+                                        )
+                                            .keys()
+                                            .value()
+                                            .map(group => ({
+                                                group: group,
+                                                filter: {
+                                                    type:
+                                                        'GroupComparisonFilter',
+                                                    values: [group],
+                                                },
+                                            })),
+                                        filterAppliersOverride: {
+                                            ['GroupComparisonFilter']: this
+                                                .store.applySampleIdFilter,
+                                        },
+                                    }}
+                                    gene={this.store.selectedMutationMapperGene}
+                                />
+                            </div>
+
+                            {this.store.activeGroups.result!.map(g => {
+                                console.log(
+                                    this.store.mutationsByGroup.result![g.uid]
+                                );
+                                console.log(
+                                    this.store.selectedMutationMapperGene
+                                );
+                                return (
+                                    <div>
+                                        <h3>{g.name}</h3>
+                                        <Mutations
+                                            store={this.store}
+                                            mutations={
+                                                this.store.mutationsByGroup
+                                                    .result![g.uid]
+                                            }
+                                            gene={
+                                                this.store
+                                                    .selectedMutationMapperGene
+                                            }
+                                        />
+                                    </div>
+                                );
+                            })}
                         </MSKTab>
                     )}
                     {this.store.showMRNATab && (

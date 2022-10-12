@@ -14,6 +14,7 @@ import {
     SampleMolecularIdentifier,
     GenePanelDataMultipleStudyFilter,
     Mutation,
+    Gene,
 } from 'cbioportal-ts-api-client';
 import { action, observable, makeObservable, computed } from 'mobx';
 import client from '../../shared/api/cbioportalClientInstance';
@@ -37,9 +38,13 @@ import {
 } from 'shared/api/session-service/sessionServiceModels';
 import ComplexKeySet from 'shared/lib/complexKeyDataStructures/ComplexKeySet';
 import { REQUEST_ARG_ENUM } from 'shared/constants';
+import { Sample } from 'cbioportal-ts-api-client/src/generated/CBioPortalAPIInternal';
+
+import { DataFilter } from 'react-mutation-mapper';
 
 export default class GroupComparisonStore extends ComparisonStore {
-    @observable.ref private sessionId: string;
+    @observable private sessionId: string;
+    @observable private _selectedMutationMapperGene: string;
 
     constructor(
         sessionId: string,
@@ -348,7 +353,9 @@ export default class GroupComparisonStore extends ComparisonStore {
                 {
                     projection: REQUEST_ARG_ENUM.PROJECTION_DETAILED,
                     mutationMultipleStudyFilter: {
-                        entrezGeneIds: [7157],
+                        entrezGeneIds: [
+                            this.selectedMutationMapperGene.entrezGeneId,
+                        ],
                         sampleMolecularIdentifiers,
                         // molecularProfileIds: this.mutationEnrichmentProfiles.result?.map(p => p.molecularProfileId)
                     } as MutationMultipleStudyFilter,
@@ -359,18 +366,14 @@ export default class GroupComparisonStore extends ComparisonStore {
         },
     });
 
-    // {sampleId: group}
     @computed get groupedSamples(): { name: string; samples: string[] }[] {
-        // const map = new Map<string, string[]>();
         const samplesByGroup = [];
         for (const groupData of this._session.result!.groups) {
-            // map.set(groupData.name, groupData.studies[0].samples)
             samplesByGroup.push({
                 name: groupData.name,
                 samples: groupData.studies[0].samples,
             });
         }
-        // console.log(map)
         return samplesByGroup;
     }
 
@@ -387,27 +390,39 @@ export default class GroupComparisonStore extends ComparisonStore {
     //     }
     // }
 
-    // public get genes() {
-    //     return this._genes;
-    // }
-    // private readonly _genes = remoteData({
-    //     await: () => [this.samples, this.mutationEnrichmentProfiles],
-    //     invoke: async () => {
-    //         const genes = await client.fetchGenesUsingPOST({
-    //             geneIdType: 'HUGO_GENE_SYMBOL',
-    //             geneIds: this.activeGroups.result!.map(g => g.name)
-    //         });
-    //         return genes.map(g => g.hugoGeneSymbol)
-    //         // return genes
-    //     }
-    // })
+    public readonly genes = remoteData({
+        // await: () => [this._session],
+        invoke: async () => {
+            const genes = await client.fetchGenesUsingPOST({
+                geneIdType: 'HUGO_GENE_SYMBOL',
+                // geneIds: ['TP53', 'KRAS', 'NRAS'] // all but first
+                // geneIds: ['TP53', 'KRAS'] // all but last
+                // geneIds: ['TP53', 'NRAS'] // all but first
+                // geneIds: ['NRAS', 'KRAS'] // all but first
+                geneIds: ['TP53'], // crashes on refresh for all
+                // geneIds: ['KRAS'] // all but last
+                // geneIds: ['NRAS'] // all but first
+            });
+            return genes;
+        },
+    });
 
-    // @computed get genes () {
-    //     const genes = []
-    //     genes.push(this.mutationsByGene!['KRAS'][0].gene)
-    //     genes.push(this.mutationsByGene!['TP53'][0].gene)
-    //     return genes;
-    // }
+    @computed get selectedMutationMapperGene() {
+        const gene =
+            this.genes.result!.find(
+                g => g.hugoGeneSymbol === this._selectedMutationMapperGene
+            ) || this.genes.result![0];
+        if (!gene) {
+            debugger;
+        }
+        return gene;
+    }
+
+    @action.bound
+    public setSelectedMutationMapperGene(gene: Gene) {
+        this._selectedMutationMapperGene = gene.hugoGeneSymbol;
+    }
+
     // @computed get hugoGeneSymbols() {
     //     return (
     //         _.keys(this.mutationsByGene)
@@ -427,6 +442,117 @@ export default class GroupComparisonStore extends ComparisonStore {
     //         (mutation: Mutation) => mutation.gene.hugoGeneSymbol in this.hugoGeneSymbols
     //     )
     // }
+
+    // @autobind
+    // public applySampleIdFilter(
+    //     filter: DataFilter<string>,
+    //     mutation: Mutation
+    // ): boolean {
+    //     const group = this.groupedSamples.find(
+    //         g => g.name === filter.values[0]
+    //     );
+    //     if (group) {
+    //         return group.samples.includes(mutation.sampleId);
+    //     } else {
+    //         return false;
+    //     }
+    // }
+
+    // readonly mutationsByGroup = remoteData({
+    //     await: () => [this.mutations, this.activeGroups],
+    //     invoke: async () => {
+    //         const mutationsBySampleId = _.keyBy(
+    //             this.mutations.result!,
+    //             m => m.sampleId
+    //         );
+
+    //         const ret = this.activeGroups.result!.reduce(
+    //             (aggr: { [groupId: string]: Mutation[] }, group) => {
+    //                 const samplesInGroup = _(group.studies)
+    //                     .map(g => g.samples)
+    //                     .flatten()
+    //                     .value();
+
+    //                 const mutations = _(samplesInGroup)
+    //                     .map(s => {
+    //                         return mutationsBySampleId[s];
+    //                     })
+    //                     .flatten()
+    //                     .compact()
+    //                     .value();
+
+    //                 aggr[group.uid] = mutations;
+    //                 return aggr;
+    //             },
+    //             {}
+    //         );
+    //         return ret;
+    //     },
+    // });
+
+    // @autobind
+    // public applySampleIdFilter(
+    //     filter: DataFilter<string>,
+    //     mutation: Mutation
+    // ): boolean {
+    //     const group = this.groupedSamples.find(
+    //         g => g.name === filter.values[0]
+    //     );
+    //     if (group) {
+    //         return group.samples.includes(mutation.sampleId);
+    //     } else {
+    //         return false;
+    //     }
+    // }
+    @autobind
+    public applySampleIdFilter(
+        filter: DataFilter<string>,
+        mutation: Mutation
+    ): boolean {
+        const group = _(this.mutationsByGroup.result!)
+            .keys()
+            .value()
+            .find(g => g === filter.values[0]);
+        if (group) {
+            return this.mutationsByGroup.result![group].some(
+                m => m.sampleId === mutation.sampleId
+            );
+        } else {
+            return false;
+        }
+    }
+
+    readonly mutationsByGroup = remoteData({
+        await: () => [this.mutations, this.activeGroups],
+        invoke: async () => {
+            const mutationsBySampleId = _.keyBy(
+                this.mutations.result!,
+                m => m.sampleId
+            );
+
+            const ret = this.activeGroups.result!.reduce(
+                (aggr: { [groupId: string]: Mutation[] }, group) => {
+                    const samplesInGroup = _(group.studies)
+                        .map(g => g.samples)
+                        .flatten()
+                        .value();
+
+                    const mutations = _(samplesInGroup)
+                        .map(s => {
+                            return mutationsBySampleId[s];
+                        })
+                        .flatten()
+                        .compact()
+                        .value();
+
+                    aggr[group.uid] = mutations;
+                    return aggr;
+                },
+                {}
+            );
+            return ret;
+        },
+    });
 
     readonly allStudies = remoteData(
         {
